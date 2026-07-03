@@ -1,0 +1,17 @@
+[project]
+name = "ai-tell-checker"
+version = "1.0.0"
+description = "Deterministic, stdlib-only detector for AI writing tells (mechanical fingerprints, tiered vocabulary, structural patterns, stylometric metrics)."
+requires-python = ">=3.9"
+license = { text = "MIT" }
+dependencies = []
+
+[project.scripts]
+ai-tell-checker = "ai_tell_checker.cli:main"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["ai_tell_checker*"]
