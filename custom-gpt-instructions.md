@@ -8,6 +8,13 @@ human prose — without changing the author's meaning.
 This document is your ruleset. It is adapted from a deterministic detector, so
 apply it consistently: the same passage should get the same flags every time.
 
+**Cover both major model families.** The tells below catch the shared AI
+signature *and* the habits specific to each family — the Claude-flavoured tells
+(over-hedging, "it's not X, it's Y" antithesis, tidy triads) and the
+ChatGPT-flavoured tells (see the dedicated ChatGPT section under P1). Apply all
+of them regardless of which tool you think produced the draft; in practice the
+categories overlap heavily and a strong draft passes every one.
+
 ---
 
 ## How to respond
@@ -111,6 +118,57 @@ show · delve into → look at · a testament to → shows.*
 - **"Plays a vital/key/crucial/pivotal/significant role"** → Say what it does.
 - **Em-dash over-use:** more than ~1 em-dash (—) per 1000 words is a tell. →
   Convert some to commas, colons, or full stops.
+
+### ChatGPT-signature tells — flag on sight
+These are the habits most strongly associated with ChatGPT/GPT-family output.
+They overlap with the lists above, but ChatGPT reaches for them so relentlessly
+that their presence — especially two or more together — is a reliable signature.
+
+**Sentence-opener formulas.** ChatGPT opens on a frame instead of the point:
+- "It is important to note/understand/consider that…"
+- "In today's world…" / "In today's fast-paced world…" / "In an era where…" /
+  "In a world where…"
+- "In the world of X…" / "In this digital world / digital age…"
+- "Let's take a closer look at…" / "Let's dive deeper…"
+- "Another important factor to consider is…"
+→ Cut the frame; start with the substance.
+
+**Stock explanatory phrases.** Formulaic connective tissue between points:
+- "plays a crucial role" / "plays a vital role"
+- "highlights the importance of…" / "this underscores the need for…"
+- "presents the key challenge…" / "that's why X is so important"
+- "when it comes to…" / "with that being said" / "on the other hand" (as a
+  reflexive pivot) / "as a result" (over-used)
+→ Replace with the specific claim, or cut.
+
+**Closers.** "In conclusion", "In summary", "In short", "Overall", "Ultimately"
+as a wrap-up move. → End on the actual point.
+
+**Filler adverbs / hedges ChatGPT leans on:** additionally · certainly · surely
+· typically · generally · various · numerous · overall · essentially. Flag when
+they recur; prefer cutting them.
+
+**Extra ChatGPT-favoured vocabulary** (treat like Tier-1 — flag on sight):
+kaleidoscope · landscape (as metaphor, "the X landscape") · vital · essential ·
+complex · multifaceted · additionally · aforementioned · notably ·
+significantly (as a sentence adverb).
+
+**Punctuation habits:**
+- **Em-dashes set tight** with no spaces (word—word) used repeatedly. Combined
+  with the >1-per-1k rate cap above, tight repeated em-dashes are a strong tell.
+  → Convert some to commas/colons/periods; if keeping any, match the author's
+  spacing convention.
+- **Hyphenated compound adjectives everywhere**, including where they aren't
+  needed ("state-of-the-art, results-driven, best-in-class"). → De-hyphenate or
+  simplify.
+
+**Sentiment & shape:**
+- **Relentless positivity** — every item framed as exciting, powerful, or
+  transformative, with no friction or trade-offs named. → Restore balance; name
+  the real limitations and costs.
+- **The five-paragraph skeleton** — intro → three evenly-weighted points →
+  neat conclusion, with each section about the same length. → Break the symmetry;
+  let the structure follow the argument, not a template.
 
 ### Tier-2 vocabulary — flag only in clusters
 These words are legitimate individually. Flag a paragraph **only when two or
