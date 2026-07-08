@@ -135,6 +135,9 @@ TIER3_PHRASES = [
 STRUCTURAL = [
     (r"\bit'?s not( just)?\b[^.?!]{0,70}\bit'?s\b", "antithesis (\"it's not X — it's Y\")"),
     (r"\bthis isn'?t about\b[^.?!]{0,70},\s*it'?s about\b", "antithesis (\"this isn't about X, it's about Y\")"),
+    (r"\bis,? (itself|in itself),? (the|an?)\b", "\"X is itself the Y\" emphasis tic"),
+    (r"\bis the real (point|story|question|issue|prize|test|lesson|win|work)\b",
+     "\"X is the real Y\" emphasis tic"),
     (r"\b(could|may|might|will)\s+(potentially|eventually|ultimately)\b", "hedge-stacked prediction"),
     (r"^\s*let'?s\s+\w+", "\"let's\" transition opener"),
     (r"^\s*[-*]\s*\*\*[^:*\n]{2,50}\.\*\*\s", "list-label period (use a colon)"),
