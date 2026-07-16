@@ -82,6 +82,14 @@ TIER1 = [
     (r"\bmoreover\b", "moreover"),
     (r"\bfurthermore\b", "furthermore"),
     (r"\bnot only\b[^.?!]{0,70}\bbut also\b", "not only… but also"),
+    (r"\bshap(e|es|ed|ing)\b", "shape"),
+    (r"\bcleanest\b", "cleanest (superlative tic)"),
+    (r"\bhonest(ly)?\b", "honest/honestly"),
+    (r"\bquiet(ly)?\b", "quiet/quietly"),
+    (r"\bbinding constraints?\b", "binding constraint"),
+    (r"\bkeystones?\b", "keystone"),
+    (r"\bplay(s|ed|ing)?\b", "play"),
+    (r"\bfailure modes?\b", "failure mode"),
 ]
 
 TIER2 = [
@@ -138,6 +146,7 @@ STRUCTURAL = [
     (r"\bis,? (itself|in itself),? (the|an?)\b", "\"X is itself the Y\" emphasis tic"),
     (r"\bis the real (point|story|question|issue|prize|test|lesson|win|work)\b",
      "\"X is the real Y\" emphasis tic"),
+    (r"\band the \w[^.?!]{0,60}?\b(is|are) the \w+", "\"and the X is/are the Y\" emphasis tic"),
     (r"\b(could|may|might|will)\s+(potentially|eventually|ultimately)\b", "hedge-stacked prediction"),
     (r"^\s*let'?s\s+\w+", "\"let's\" transition opener"),
     (r"^\s*[-*]\s*\*\*[^:*\n]{2,50}\.\*\*\s", "list-label period (use a colon)"),
