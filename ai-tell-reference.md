@@ -51,6 +51,16 @@ Machine fingerprints. Each can be deleted or replaced without a judgment call.
 - **Chatbot artifacts:** "I hope this helps", "Great question!", "Certainly!",
   "feel free to reach out", "let me know if you need anything else",
   "as an AI (language model)". → Delete outright.
+- **Sycophantic chatbot artifacts** (a Claude signature): "You're absolutely
+  right", "That's an excellent point/question", "What a great question".
+  → Delete outright.
+- **AI-tool attribution leaks:** "Co-Authored-By: Claude" (or ChatGPT, Copilot,
+  Cursor, Gemini), "🤖 Generated with Claude Code" — commit-message or footer
+  residue pasted into prose. → Delete.
+- **Hidden unicode:** zero-width spaces/joiners, word joiners, soft hyphens,
+  bidi controls, stray BOMs. Legitimate prose never contains these; they are
+  detector-bypass or copy-paste fingerprints. (A leading BOM and a joiner
+  inside an emoji sequence are exempt.) → Strip the characters.
 - **Cutoff disclaimers:** "as of my last update/training", "I don't have access
   to real-time…", "while specific details are limited". → Delete, or replace
   with a real, dated fact.
@@ -62,9 +72,15 @@ Machine fingerprints. Each can be deleted or replaced without a judgment call.
 - **Unfilled placeholders:** `[Your Name]`, `[Insert date]`, `[Add company]`,
   `[Describe…]`, `2026-XX-XX`, and the like. → Fill in, or flag as missing input.
 - **Vague attribution with no source:** "experts believe", "studies show",
-  "research suggests", "industry leaders agree" — *when no citation follows in
-  the same sentence*. → Name the source, or cut the claim. A missing source is
-  never filled with an invented one.
+  "research suggests/indicates", "industry leaders agree" — *when nothing
+  concrete shares the sentence*. Concrete evidence — a number, a URL, "et al",
+  a parenthetical citation, or inline code — suppresses the flag. → Name the
+  source, or cut the claim. A missing source is never filled with an invented
+  one.
+- **Speculative gap-fillers** (writing around an unknown subject): "it is
+  believed that", "widely regarded/considered/believed", "maintains a low
+  profile", "prefers to stay out of the spotlight". Same concrete-evidence
+  suppression as above. → Replace with a sourced fact, or cut.
 - **Reasoning-chain artifacts:** "let's think step by step", "breaking this
   down", "to approach this systematically", "here's my thought process",
   "working through this logically". → Delete; the conclusion is stated directly.
@@ -84,15 +100,33 @@ deep dive / dive into · unpack · intricate / intricacies · holistic ·
 actionable · impactful · learnings · best practices · at its core · synergy ·
 interplay · in order to · due to the fact that · serves as · boasts ·
 genuinely / genuine (as an intensifier) · moreover · furthermore ·
-"not only … but also"
+"not only … but also" · beacon · watershed moment · ever-evolving ·
+thought leader · stands as · **load-bearing** (as metaphor —
+"load-bearing assumption/claim/test"; a distinctly *Claude* tell. Literal
+construction uses — load-bearing wall/beam/column — are never flagged, and the
+unhyphenated "load bearing" is fine)
 
 Typical fixes: *utilize → use · leverage → use · in order to → to · due to the
 fact that → because · underscore → show · robust → strong/reliable · showcase →
 show · delve into → look at · a testament to → shows.*
 
 ### Structural tells — a tell on sight
-- **Antithesis:** "It's not X — it's Y" / "This isn't about X, it's about Y."
-  → The positive claim, made directly.
+- **Antithesis:** "It's not X — it's Y" / "This isn't about X, it's about Y" /
+  "X isn't just Y — it's Z". → The positive claim, made directly.
+- **Throat-clearing openers:** "Here's the thing/truth/reality:", "Let me be
+  clear", "The uncomfortable truth is", "Make no mistake". → Cut; open on the
+  substance.
+- **Emphasis crutches:** "Full stop." / "Period." as standalone sentences,
+  "Let that sink in", "Read that again". → Delete; the point carries itself.
+- **Colon-dramatic reveal:** a portentous lead-in, a colon, and a short punchy
+  payoff — "The best part: it learns." / "The kicker: nobody noticed." (An
+  ordinary labelling colon — "Note: install the dependencies" — is fine.)
+  → A plain sentence.
+- **Negative-listing runs:** "Not a tool. Not a platform. A movement." /
+  "No guessing. No wasted motion." Two or more consecutive fragments are the
+  tell; a single one is normal writing. → State what it is, once.
+- **Aphorism formulas:** "X is the currency / lifeblood / connective tissue /
+  DNA / heartbeat of Y". → The concrete claim, or cut.
 - **Hedge-stacked predictions:** "could potentially", "may eventually", "might
   ultimately", "will ultimately". → One word, or no hedge.
 - **"Let's" transition openers** at the start of a line ("Let's dive in",
@@ -100,6 +134,7 @@ show · delve into → look at · a testament to → shows.*
 - **List-label period:** a bullet that starts `**Bold label.**` with a period.
   → A colon, or the label folded into a sentence.
 - **Title-Case Headings** where most words are capitalized. → Sentence case.
+- **Emoji in headings** ("## 🚀 Launch plan"). → Remove the emoji.
 - **Generic future-narrative closer:** "may become one of the most important
   narratives/stories/trends…". → Cut, or a concrete claim.
 - **Social-endorsement closer:** "this is a must-read", "don't sleep on this",
@@ -112,8 +147,10 @@ show · delve into → look at · a testament to → shows.*
 - **Filler connectives:** "at the end of the day", "when it comes to", "that
   (being) said". → Cut, or a precise transition.
 - **"Plays a vital/key/crucial/pivotal/significant role"** → What it actually does.
-- **Em-dash over-use:** more than ~1 em-dash (—) per 1000 words is a tell. →
-  Some converted to commas, colons, or full stops.
+- **Em-dash over-use:** more than ~1 *closed* em-dash (word—word, no spaces)
+  per 1000 words is the P1 tell — the tight-set style is the AI signature.
+  Spaced em-dashes ( — ) are a normal human habit and only warrant a P2 note
+  past ~2 per 1000 words. → Some converted to commas, colons, or full stops.
 
 ### ChatGPT-signature tells — a tell on sight
 The habits most strongly associated with ChatGPT/GPT-family output. They overlap
@@ -173,7 +210,9 @@ harness · navigate · foster · elevate · unleash · streamline · empower ·
 bolster · spearhead · resonate · revolutionize · facilitate · underpin ·
 nuanced · crucial · multifaceted · ecosystem · myriad · plethora · encompass ·
 catalyze · reimagine · cultivate · transformative / transformation ·
-cornerstone · paramount · poised · burgeoning · nascent · overarching
+cornerstone · paramount · poised · burgeoning · nascent · overarching ·
+commence · ascertain · endeavor · embrace · galvanize · illuminate ·
+quintessential · "a symphony of"
 
 The fix for a tripped cluster: rewrite the paragraph to remove enough of these
 words to break the cluster, favouring concrete verbs and nouns.
@@ -209,6 +248,11 @@ break some into pairs or single items.
 - **Uniform paragraph length:** on 4+ paragraphs, when every paragraph is nearly
   the same length (standard deviation under 15% of the mean), the text reads
   machine-blocked. → Vary paragraph length; let some be short.
+- **Repeated sentence openers (anaphora):** three or more consecutive sentences
+  opening on the same word. Repetition of ordinary function words ("The…",
+  "It…") or enumerators ("Step…", "First…") doesn't count — only a content
+  word repeated as a rhetorical drumbeat. Deliberate anaphora is a legitimate
+  device, hence advisory only. → Vary the openings, or keep it if intentional.
 
 ### Spelling register (optional)
 When a target register is known, mismatched spellings are a tell: for British
@@ -228,8 +272,8 @@ states which register they want.
 - **Vary rhythm.** Mixed sentence and paragraph lengths.
 - **Keep the author's voice.** Match their register; personality is not flattened
   into corporate neutral — the goal is human, not generic.
-- **When a flag is load-bearing, leave it.** A term of art, a quoted title, or a
-  proper noun stays, with a note, rather than being mangled.
+- **When a flagged word is doing essential work, leave it.** A term of art, a
+  quoted title, or a proper noun stays, with a note, rather than being mangled.
 
 ---
 

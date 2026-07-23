@@ -34,12 +34,25 @@ MECHANICAL = [
     (r"\[(?:Your|Insert|Add|Enter|Describe|Specify|Choose)[^\]]{0,60}\]|"
      r"\b\d{4}-XX-XX\b",
      "unfilled placeholder"),
+    # Suppression (any digit, URL, "et al", parenthetical cite, or backtick in
+    # the same sentence) lives in checker.has_concrete_evidence, not here.
     (r"\b(experts (believe|agree)|studies show|research suggests|"
-     r"industry leaders agree)\b(?![^.?!]{0,60}\([A-Z][a-zA-Z.&]+,?\s*\d{4})",
+     r"research indicates|industry leaders agree)\b",
      "vague attribution (no source in-sentence)"),
     (r"\b(let'?s think step by step|breaking this down|to approach this systematically|"
      r"here'?s my thought process|working through this logically)\b",
      "reasoning-chain artifact"),
+    (r"\byou'?re absolutely right\b|\bthat'?s an excellent (point|question)\b|"
+     r"\bwhat a great question\b",
+     "sycophantic chatbot artifact"),
+    (r"Co-Authored-By:\s*(Claude|ChatGPT|GPT|Copilot|Cursor|Gemini)|"
+     r"Generated with \[?(Claude Code|ChatGPT|Copilot)|🤖 Generated with",
+     "AI-tool attribution leak"),
+    # Speculative gap-filling around an unknown subject — suppressed in the
+    # checker when concrete evidence (digit, URL, citation) shares the sentence.
+    (r"\bit is believed that\b|\bwidely (regarded|considered|believed)\b|"
+     r"\bmaintains a low profile\b|\bprefers to stay out of the spotlight\b",
+     "speculative gap-filler"),
 ]
 
 TIER1 = [
@@ -76,8 +89,17 @@ TIER1 = [
     (r"\binterplay\b", "interplay"),
     (r"\bin order to\b", "in order to"),
     (r"\bdue to the fact that\b", "due to the fact that"),
-    (r"\bserves? as\b", "serves as"),
+    (r"\b(?:serves?|stands?) as\b", "serves as / stands as"),
     (r"\bboasts?\b", "boasts"),
+    # Claude-signature metaphor ("load-bearing assumption/claim/test/invariant").
+    # Hyphen required; literal construction nouns are carved out.
+    (r"\bload-bearing\b(?!\s+(?:walls?|beams?|columns?|structures?|members?|"
+     r"capacity|elements?|joists?))",
+     "load-bearing (Claude metaphor)"),
+    (r"\bbeacon\b", "beacon"),
+    (r"\bwatershed moment\b", "watershed moment"),
+    (r"\bever[- ]evolving\b", "ever-evolving"),
+    (r"\bthought leader(s|ship)?\b", "thought leader"),
     (r"\bgenuinely\b|\bgenuine\b", "genuinely/genuine (intensifier)"),
     (r"\bmoreover\b", "moreover"),
     (r"\bfurthermore\b", "furthermore"),
@@ -115,6 +137,14 @@ TIER2 = [
     (r"\bburgeoning\b", "burgeoning"),
     (r"\bnascent\b", "nascent"),
     (r"\boverarching\b", "overarching"),
+    (r"\bcommenc(e|es|ed|ing)\b", "commence"),
+    (r"\bascertain\w*\b", "ascertain"),
+    (r"\bendeavou?r\w*\b", "endeavor"),
+    (r"\bembrac(e|es|ed|ing)\b", "embrace"),
+    (r"\bgalvani[zs]\w+\b", "galvanize"),
+    (r"\billuminat\w+\b", "illuminate"),
+    (r"\bquintessential(ly)?\b", "quintessential"),
+    (r"\bsymphony of\b", "a symphony of"),
 ]
 
 TIER3_WORDS = [
@@ -135,13 +165,17 @@ TIER3_PHRASES = [
 STRUCTURAL = [
     (r"\bit'?s not( just)?\b[^.?!]{0,70}\bit'?s\b", "antithesis (\"it's not X — it's Y\")"),
     (r"\bthis isn'?t about\b[^.?!]{0,70},\s*it'?s about\b", "antithesis (\"this isn't about X, it's about Y\")"),
+    (r"\b(is|are)n'?t just\b[^.?!]{0,70}\b(it'?s|they'?re)\b",
+     "antithesis (\"isn't just X — it's Y\")"),
     (r"\bis,? (itself|in itself),? (the|an?)\b", "\"X is itself the Y\" emphasis tic"),
     (r"\bis the real (point|story|question|issue|prize|test|lesson|win|work)\b",
      "\"X is the real Y\" emphasis tic"),
     (r"\b(could|may|might|will)\s+(potentially|eventually|ultimately)\b", "hedge-stacked prediction"),
     (r"^\s*let'?s\s+\w+", "\"let's\" transition opener"),
     (r"^\s*[-*]\s*\*\*[^:*\n]{2,50}\.\*\*\s", "list-label period (use a colon)"),
-    (r"^#{1,6}\s+([A-Z][a-z']*\s+){2,}[A-Z][a-z']*\s*$", "title-case heading"),
+    # (?-i: …) keeps this case-sensitive even though scan_structural passes re.I —
+    # without it every 3+-word heading matches, sentence case included.
+    (r"^(?-i:#{1,6}\s+(?:[A-Z][a-z']*\s+){2,}[A-Z][a-z']*)\s*$", "title-case heading"),
     (r"\b\w+,\s+\w+,?\s+and\s+\w+\b", "rule-of-three triad"),
     (r"\b(may|could|will|is poised to)\s+become\s+(one of the most|the most)\s+\w+\s+"
      r"(narrative|story|trend|theme|chapter|movement|force)", "generic future-narrative closer"),
@@ -155,6 +189,26 @@ STRUCTURAL = [
     (r"\bwhen it comes to\b", "\"when it comes to\""),
     (r"\bthat (being )?said\b", "\"that said\""),
     (r"\bplays?\s+an?\s+(vital|key|crucial|pivotal|significant)\s+role\b", "\"plays a … role\""),
+    (r"\b(here'?s the (thing|truth|reality)[:,]|let me be clear\b|"
+     r"the uncomfortable (truth|reality) is\b|make no mistake\b)",
+     "throat-clearing opener"),
+    # "Full stop." / "Period." only as standalone sentences; the others anywhere.
+    (r"(?:^|[.!?…]\s+)(full stop\.|period\.)|\blet that sink in\b|\bread that again\b",
+     "emphasis crutch (\"Full stop.\" / \"Let that sink in\")"),
+    # Portentous lead-in + colon + short no-comma payoff ("The best part: it learns.").
+    # The lead-in whitelist is the false-positive guard — a plain "Note:" never fires.
+    (r"(?:^|[.!?]\s+)the (truth|best part|kicker|catch|result|reality|good news|bad news|"
+     r"real (problem|question|story))(\s+(is|was))?:\s+\S+(\s+\S+){0,4}[.!?]",
+     "colon-dramatic reveal"),
+    # Cluster-gated: a single "Not X." fragment is normal writing; 2+ consecutive is the tell.
+    (r"(?:\bnot (a|an|the|just|because)\b[^.?!\n]{1,40}[.?!]\s+){2,}",
+     "negative-listing run (\"Not X. Not Y.\")"),
+    (r"(?:\bno \w[^.?!,\n]{0,30}\.\s+){2,}",
+     "tailing-negation run (\"No X. No Y.\")"),
+    (r"\bthe (currency|lifeblood|connective tissue|dna|heartbeat|beating heart) of\b",
+     "aphorism formula (\"the lifeblood of\")"),
+    (r"^#{1,6}\s+[^\n]*[☀-➿⬀-⯿\U0001F000-\U0001FAFF]",
+     "emoji in heading"),
 ]
 
 US_SPELLINGS = [

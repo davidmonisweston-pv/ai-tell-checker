@@ -27,7 +27,39 @@ TIER2_CLUSTER_MIN = 2             # distinct tier-2 words in one paragraph
 RULE_OF_THREE_PER1K_MAX = 1.0     # triads are fine occasionally; flag only if they recur
 TTR_MIN = 0.40                    # below this on 200+ words is worth a second look
 TTR_MIN_WORDS = 200
-EMDASH_PER1K_DEFAULT_MAX = 1.0
+EMDASH_PER1K_DEFAULT_MAX = 1.0    # cap on CLOSED em-dashes (word—word); total gets 2×
+ANAPHORA_RUN_MIN = 3              # consecutive sentences opening on the same word
+
+# Zero-width / bidi codepoints. Legitimate prose never contains these; their
+# presence is a detector-bypass or copy-paste fingerprint. A leading BOM is
+# exempted (editor artifact), as is ZWJ inside an emoji sequence.
+HIDDEN_UNICODE = {
+    "\u200b": "zero-width space",
+    "\u200c": "zero-width non-joiner",
+    "\u200d": "zero-width joiner",
+    "\u2060": "word joiner",
+    "\ufeff": "zero-width no-break space (BOM)",
+    "\u00ad": "soft hyphen",
+    "\u202a": "bidi control (LRE)",
+    "\u202b": "bidi control (RLE)",
+    "\u202c": "bidi control (PDF)",
+    "\u202d": "bidi control (LRO)",
+    "\u202e": "bidi control (RLO)",
+    "\u2066": "bidi isolate (LRI)",
+    "\u2067": "bidi isolate (RLI)",
+    "\u2068": "bidi isolate (FSI)",
+    "\u2069": "bidi isolate (PDI)",
+}
+
+# Common sentence openers whose repetition is ordinary structure, not anaphora
+# (slopless gates its triple-repeat rule the same way, after a human-corpus audit).
+ANAPHORA_STOPWORDS = {
+    "the", "a", "an", "it", "its", "this", "that", "these", "those", "there",
+    "i", "we", "you", "he", "she", "they", "and", "but", "or", "so", "if",
+    "in", "on", "at", "for", "to", "as", "when", "while", "after", "before",
+    "one", "two", "three", "first", "second", "third", "next", "then",
+    "chapter", "step", "note", "example", "figure", "table",
+}
 
 
 @dataclass
@@ -99,6 +131,7 @@ def metrics(text: str, hedges=None, boosters=None) -> dict:
         pct_short=sum(x < 12 for x in sl) / ns,
         pct_long=sum(x > 30 for x in sl) / ns,
         emdash_per1k=per1k(t.count("—")), endash_per1k=per1k(t.count("–")),
+        emdash_closed_per1k=per1k(len(re.findall(r"\w—\w", t))),
         semicolon_per1k=per1k(t.count(";")), paren_per1k=per1k(t.count("(")),
         flesch=flesch, hedge_booster=(hed / boo if boo else float("inf")),
         hedges=hed, boosters=boo, ttr=ttr,
@@ -119,11 +152,67 @@ def _snippet(text, mo, pad=25):
     return "…" + text[s:mo.end() + pad].replace("\n", " ").strip() + "…"
 
 
+def _in_emoji_sequence(text: str, i: int) -> bool:
+    """True when the char at i sits next to an emoji codepoint — a ZWJ inside
+    a legitimate emoji sequence (👨‍👩‍👧) is not a hidden-unicode tell."""
+    def is_emoji(c):
+        cp = ord(c)
+        return 0x1F000 <= cp <= 0x1FAFF or 0x2600 <= cp <= 0x27BF or cp == 0xFE0F
+    before = text[i - 1] if i > 0 else ""
+    after = text[i + 1] if i + 1 < len(text) else ""
+    return (before and is_emoji(before)) or (after and is_emoji(after))
+
+
+def scan_hidden_unicode(text: str) -> list:
+    """P0 scan for zero-width/bidi codepoints. Runs on the RAW input, before
+    strip_escaped — these chars hide anywhere, including inside code spans."""
+    if text.startswith("\ufeff"):          # leading BOM is an editor artifact
+        text = text[1:]
+    counts = {}
+    for i, ch in enumerate(text):
+        if ch in HIDDEN_UNICODE:
+            if ch == "\u200d" and _in_emoji_sequence(text, i):
+                continue
+            counts[ch] = counts.get(ch, 0) + 1
+    return [Finding("P0", "mechanical", f"hidden unicode: {HIDDEN_UNICODE[ch]}",
+                    f"U+{ord(ch):04X} ×{n}")
+            for ch, n in sorted(counts.items())]
+
+
+# Signals that a shape-matched claim is anchored to something concrete: a digit,
+# URL, "et al", a parenthetical citation, or inline code. Any of these in the
+# same sentence suppresses the vague-attribution / gap-filler flag (slopless's
+# concrete-evidence suppression, its single best false-positive guard).
+_CONCRETE_EVIDENCE = re.compile(r"\d|https?://|\bet al\b|\([A-Z][^)]{1,60}\)|`")
+
+# MECHANICAL labels the suppression applies to.
+_SUPPRESSIBLE = {"vague attribution (no source in-sentence)", "speculative gap-filler"}
+
+
+def has_concrete_evidence(span: str) -> bool:
+    return bool(_CONCRETE_EVIDENCE.search(span))
+
+
+def _sentence_around(text: str, start: int, end: int) -> str:
+    """The sentence containing [start:end) of flattened text."""
+    s = max(text.rfind(". ", 0, start), text.rfind("! ", 0, start),
+            text.rfind("? ", 0, start)) + 1
+    e_candidates = [text.find(p, end) for p in (". ", "! ", "? ")]
+    e_candidates = [x for x in e_candidates if x != -1]
+    e = min(e_candidates) + 1 if e_candidates else len(text)
+    return text[s:e]
+
+
 def scan_mechanical(text: str) -> list:
     out = []
     flat = _flatten(text)
     for pat, label in rules.MECHANICAL:
-        mo = re.search(pat, flat, re.I | re.S)
+        if label in _SUPPRESSIBLE:
+            mo = next((m for m in re.finditer(pat, flat, re.I | re.S)
+                       if not has_concrete_evidence(_sentence_around(flat, m.start(), m.end()))),
+                      None)
+        else:
+            mo = re.search(pat, flat, re.I | re.S)
         if mo:
             out.append(Finding("P0", "mechanical", label, _snippet(flat, mo)))
     return out
@@ -206,6 +295,29 @@ def scan_structural(text: str, nwords: int) -> list:
     return out
 
 
+def scan_anaphora(text: str) -> list:
+    """3+ consecutive sentences opening on the same word (triple-repeat
+    anaphora). Gated against ANAPHORA_STOPWORDS and digit openers, because
+    repeated function-word or enumerator openers are ordinary structure. P2 —
+    anaphora is also a deliberate human rhetorical device."""
+    flat = _flatten(clean(text))
+    sents = [s for s in re.split(r"(?<=[.!?])\s+(?=[A-Z0-9])", flat) if len(s.split()) > 1]
+    out = []
+    run_word, run_len = None, 0
+    for s in sents + [""]:            # sentinel flushes the final run
+        mo = re.match(r"[A-Za-z']+", s)
+        w = mo.group(0).lower() if mo else None
+        if w is not None and w == run_word:
+            run_len += 1
+        else:
+            if (run_word and run_len >= ANAPHORA_RUN_MIN
+                    and run_word not in ANAPHORA_STOPWORDS and not run_word.isdigit()):
+                out.append(Finding("P2", "structural", "repeated sentence openers (anaphora)",
+                                   f"\"{run_word.capitalize()} …\" ×{run_len} consecutive"))
+            run_word, run_len = w, 1
+    return out
+
+
 def scan_stylometrics(m: dict) -> list:
     out = []
     if m["words"] >= TTR_MIN_WORDS and m["ttr"] < TTR_MIN:
@@ -233,21 +345,28 @@ def run(text: str, profile=None, quick: bool = False):
     boosters = profile.boosters if profile else None
     m = metrics(scan_text, hedges=hedges, boosters=boosters)
 
-    findings = scan_mechanical(scan_text)
+    findings = scan_hidden_unicode(text)   # raw text: these chars hide anywhere
+    findings += scan_mechanical(scan_text)
     allow = profile.tier1_allow if profile else None
     soft = profile.tier1_soft if profile else None
     soft_rate = profile.soft_rate_per1k_max if profile else 0.6
     findings += scan_tier1(scan_text, m["words"], allow=allow, soft=soft, soft_rate_max=soft_rate)
     findings += scan_structural(scan_text, m["words"])
 
+    # Closed em-dashes (word—word) are the AI signature; spaced ones are a normal
+    # human habit. P1 gates on the closed rate; the total rate only warns at 2×.
     emdash_max = profile.emdash_per1k_max if profile else EMDASH_PER1K_DEFAULT_MAX
-    if m["emdash_per1k"] > emdash_max:
-        findings.append(Finding("P1", "structural", "em-dash over-use",
-                                 f"{m['emdash_per1k']}/1k (cap {emdash_max}/1k)"))
+    if m["emdash_closed_per1k"] > emdash_max:
+        findings.append(Finding("P1", "structural", "em-dash over-use (closed, word—word)",
+                                 f"{m['emdash_closed_per1k']}/1k (cap {emdash_max}/1k)"))
+    elif m["emdash_per1k"] > 2 * emdash_max:
+        findings.append(Finding("P2", "structural", "em-dash over-use (total)",
+                                 f"{m['emdash_per1k']}/1k (cap {2 * emdash_max}/1k)"))
 
     if not quick:
         findings += scan_tier2_clusters(scan_text)
         findings += scan_tier3(scan_text, m["words"])
+        findings += scan_anaphora(scan_text)
         findings += scan_stylometrics(m)
         if m["paragraphs"] >= 4 and m["para_len_sd"] < m["para_len_mean"] * 0.15:
             findings.append(Finding("P2", "stylometric", "uniform paragraph length",
